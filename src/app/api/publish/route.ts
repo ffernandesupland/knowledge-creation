@@ -61,15 +61,14 @@ export async function POST(req: Request) {
       addParams.set("displayFields", displayFieldsStr);
     }
 
-    const addUrl = `${baseUrl}/addToKb?${!useBody ? addParams.toString() : `companyCode=${companyCode}&appInterface=${appInterface}`}`;
-
-    // For large payloads, we put the fields in the POST body as application/x-www-form-urlencoded
-    const bodyParams = new URLSearchParams();
+    const addUrl = `${baseUrl}/addToKb?${addParams.toString()}`;
+    
+    // For large payloads, we put displayFields in the POST body as multipart/form-data
+    let postBody: any = undefined;
     if (useBody) {
-      bodyParams.set("title", title);
-      bodyParams.set("templateName", templateName);
-      bodyParams.set("summary", summary || title);
-      bodyParams.set("displayFields", displayFieldsStr);
+      const formData = new FormData();
+      formData.append("displayFields", displayFieldsStr);
+      postBody = formData;
     }
 
     console.log("[Publish] Calling addToKb:", addUrl);
@@ -80,9 +79,9 @@ export async function POST(req: Request) {
       headers: {
         Authorization: `Basic ${basicAuth}`,
         Accept: "application/json",
-        ...(useBody ? { "Content-Type": "application/x-www-form-urlencoded" } : {}),
+        // Content-Type is automatically set to multipart/form-data with boundary by the fetch API when passed a FormData object
       },
-      body: useBody ? bodyParams.toString() : undefined,
+      body: postBody,
       cache: "no-store",
     });
 
