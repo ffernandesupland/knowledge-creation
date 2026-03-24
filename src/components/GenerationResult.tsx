@@ -375,6 +375,13 @@ export function GenerationResult({ result, sourceContent, onSplit, onDiscard, ar
               {commentStatus.done === commentStatus.total && commentStatus.errors.length === 0 && (
                 <span className="ml-2 text-xs text-emerald-600 font-medium">✓ All done</span>
               )}
+              <div className="mt-1 flex flex-wrap gap-1.5">
+                {(archivedArticleIds || consolidatedData?.consolidationPlan?.articlesToArchive || []).map(id => (
+                  <span key={id} className="text-[10px] font-mono bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded border border-amber-200/50">
+                    {id}
+                  </span>
+                ))}
+              </div>
               {commentStatus.errors.length > 0 && (
                 <div className="mt-1 text-xs text-red-600">
                   {commentStatus.errors.map((e, i) => <div key={i}>⚠ {e}</div>)}
