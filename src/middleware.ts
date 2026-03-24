@@ -5,7 +5,8 @@ export function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
   
   // Public routes that don't require authentication
-  if (path.startsWith('/login') || path.startsWith('/api/auth/login') || path.startsWith('/_next') || path.startsWith('/favicon.ico')) {
+  // All /api/* routes are exempt — they use Bearer tokens internally, not cookies
+  if (path.startsWith('/login') || path.startsWith('/api/') || path.startsWith('/_next') || path.startsWith('/favicon.ico')) {
     return NextResponse.next();
   }
 
