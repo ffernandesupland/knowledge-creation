@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle2, Copy, AlertTriangle, ExternalLink, GitBranch, Layers, Archive, FilePlus, LayoutTemplate, Loader2, Check, X } from "lucide-react";
+import { CheckCircle2, Copy, AlertTriangle, ExternalLink, GitBranch, Layers, Archive, FilePlus, LayoutTemplate, Loader2, Check, X, MessageSquare } from "lucide-react";
 import { useState } from "react";
 
 export type SearchContextArticle = {
@@ -28,11 +28,18 @@ export type GenerationOutput = {
   _templateFields?: { fieldName: string; description: string; required: boolean; searchable: boolean }[];
 };
 
-export function GenerationResult({ result, sourceContent, onSplit, onDiscard }: { result: GenerationOutput | null, sourceContent?: string, onSplit?: (topics: string[]) => void, onDiscard?: () => void }) {
+export function GenerationResult({ result, sourceContent, onSplit, onDiscard, archivedArticleIds }: {
+  result: GenerationOutput | null;
+  sourceContent?: string;
+  onSplit?: (topics: string[]) => void;
+  onDiscard?: () => void;
+  archivedArticleIds?: string[];
+}) {
   const [isConsolidating, setIsConsolidating] = useState<boolean>(false);
   const [selectedForConsolidation, setSelectedForConsolidation] = useState<string[]>([]);
   const [isPublishing, setIsPublishing] = useState(false);
   const [publishResult, setPublishResult] = useState<{ success: boolean; message: string; solutionId?: string } | null>(null);
+  const [commentStatus, setCommentStatus] = useState<{ done: number; total: number; errors: string[] } | null>(null);
   
   const [consolidatedData, setConsolidatedData] = useState<{
     mergedDraft: GenerationOutput;
@@ -356,6 +363,27 @@ export function GenerationResult({ result, sourceContent, onSplit, onDiscard }: 
           </div>
         )}
 
+        {/* Deprecation comments progress */}
+        {commentStatus && (
+          <div className="p-3 rounded-lg text-sm bg-amber-50 border border-amber-200 text-amber-800 flex items-start gap-3">
+            <MessageSquare size={16} className="text-amber-600 shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <span className="font-semibold">Deprecation Comments</span>
+              <span className="ml-2 text-xs text-amber-600">
+                {commentStatus.done}/{commentStatus.total} archived articles notified
+              </span>
+              {commentStatus.done === commentStatus.total && commentStatus.errors.length === 0 && (
+                <span className="ml-2 text-xs text-emerald-600 font-medium">✓ All done</span>
+              )}
+              {commentStatus.errors.length > 0 && (
+                <div className="mt-1 text-xs text-red-600">
+                  {commentStatus.errors.map((e, i) => <div key={i}>⚠ {e}</div>)}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         <div className="flex items-center justify-between">
           <div className="text-xs flex items-center gap-2">
              <span className="text-slate-500 font-medium">Confidence Score:</span>
@@ -403,7 +431,35 @@ export function GenerationResult({ result, sourceContent, onSplit, onDiscard }: 
                    });
                    const data = await res.json();
                    if (res.ok && data.success) {
-                     setPublishResult({ success: true, message: 'Published!', solutionId: data.id || data.solutionId || data.rawResponse });
+                     const newSolutionId = data.id || data.solutionId || data.rawResponse;
+                     setPublishResult({ success: true, message: 'Published!', solutionId: newSolutionId });
+
+                     // Auto-comment on merged/archived articles
+                     const idsToComment = archivedArticleIds || consolidatedData?.consolidationPlan?.articlesToArchive || [];
+                     if (idsToComment.length > 0 && newSolutionId) {
+                       setCommentStatus({ done: 0, total: idsToComment.length, errors: [] });
+                       const errors: string[] = [];
+                       for (let i = 0; i < idsToComment.length; i++) {
+                         try {
+                           const commentRes = await fetch('/api/comment', {
+                             method: 'POST',
+                             headers: { 'Content-Type': 'application/json' },
+                             body: JSON.stringify({
+                               solutionId: idsToComment[i],
+                               commentTitle: '⚠️ Merged into new consolidated article',
+                               comment: `This article has been merged and consolidated into a new master article (ID: ${newSolutionId}). The content from this article was incorporated into the new version. Please refer to the new article for the most up-to-date information. This consolidation was performed by the AI Knowledge Creator.`,
+                             }),
+                           });
+                           if (!commentRes.ok) {
+                             const errData = await commentRes.json();
+                             errors.push(`${idsToComment[i]}: ${errData.error || 'Failed'}`);
+                           }
+                         } catch {
+                           errors.push(`${idsToComment[i]}: Network error`);
+                         }
+                         setCommentStatus({ done: i + 1, total: idsToComment.length, errors: [...errors] });
+                       }
+                     }
                    } else {
                      setPublishResult({ success: false, message: data.error || data.details || 'Unknown error' });
                    }

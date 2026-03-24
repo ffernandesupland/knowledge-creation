@@ -224,7 +224,7 @@ export default function Home() {
                           // Workaround: GenerationResult doesn't directly accept `consolidatedData` prop out of the box natively, 
                           // but it builds it internally normally. We can just render the raw mergedDraft and attach its consolidationPlan.
                           // However, GenerationResult displays 'duplicateWarning' heavily. We'll strip that flag from finalized Master Drafts.
-                          <GenerationResult result={{...displayData, duplicateWarning: false, searchContext: [], isMultiTopic: false} as unknown as GenerationOutput} sourceContent={sourceContent} />
+                          <GenerationResult result={{...displayData, duplicateWarning: false, searchContext: [], isMultiTopic: false} as unknown as GenerationOutput} sourceContent={sourceContent} archivedArticleIds={(result.consolidationPlan as { articlesToArchive?: string[] })?.articlesToArchive || []} />
                        ) : (
                           <GenerationResult result={{...displayData, duplicateWarning: false, searchContext: [], isMultiTopic: false} as unknown as GenerationOutput} sourceContent={sourceContent} />
                        )}
