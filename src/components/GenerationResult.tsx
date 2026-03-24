@@ -318,7 +318,10 @@ export function GenerationResult({ result, sourceContent, onSplit, onDiscard, ar
               {templateField?.description && (
                 <p className="text-[11px] text-slate-400 mb-2 italic">{templateField.description}</p>
               )}
-              <p className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">{fieldContent}</p>
+              <div 
+                className="text-sm text-slate-700 leading-relaxed prose prose-slate max-w-none" 
+                dangerouslySetInnerHTML={{ __html: fieldContent }} 
+              />
             </div>
           );
         })
@@ -328,21 +331,30 @@ export function GenerationResult({ result, sourceContent, onSplit, onDiscard, ar
           {displayResult.problem && (
             <div className="group relative bg-white border border-slate-200 rounded-xl p-4 hover:border-indigo-200 hover:shadow-sm transition-all">
               <h4 className="text-[11px] uppercase tracking-wider text-indigo-500 font-bold mb-2">Environment / Problem</h4>
-              <p className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">{displayResult.problem}</p>
+              <div 
+                className="text-sm text-slate-700 leading-relaxed prose prose-slate max-w-none" 
+                dangerouslySetInnerHTML={{ __html: displayResult.problem }} 
+              />
             </div>
           )}
 
           {displayResult.cause && (
             <div className="group relative bg-white border border-slate-200 rounded-xl p-4 hover:border-indigo-200 hover:shadow-sm transition-all">
               <h4 className="text-[11px] uppercase tracking-wider text-orange-500 font-bold mb-2">Cause</h4>
-              <p className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">{displayResult.cause}</p>
+              <div 
+                className="text-sm text-slate-700 leading-relaxed prose prose-slate max-w-none" 
+                dangerouslySetInnerHTML={{ __html: displayResult.cause }} 
+              />
             </div>
           )}
 
           {displayResult.resolution && (
             <div className="group relative bg-white border border-slate-200 rounded-xl p-4 hover:border-indigo-200 hover:shadow-sm transition-all">
               <h4 className="text-[11px] uppercase tracking-wider text-emerald-500 font-bold mb-2">Resolution</h4>
-              <p className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">{displayResult.resolution}</p>
+              <div 
+                className="text-sm text-slate-700 leading-relaxed prose prose-slate max-w-none" 
+                dangerouslySetInnerHTML={{ __html: displayResult.resolution }} 
+              />
             </div>
           )}
         </>
