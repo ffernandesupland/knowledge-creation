@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle2, Copy, AlertTriangle, ExternalLink, GitBranch, Layers, Archive, FilePlus, LayoutTemplate } from "lucide-react";
+import { CheckCircle2, Copy, AlertTriangle, ExternalLink, GitBranch, Layers, Archive, FilePlus, LayoutTemplate, Loader2, Check, X } from "lucide-react";
 import { useState } from "react";
 
 export type SearchContextArticle = {
@@ -28,9 +28,11 @@ export type GenerationOutput = {
   _templateFields?: { fieldName: string; description: string; required: boolean; searchable: boolean }[];
 };
 
-export function GenerationResult({ result, sourceContent, onSplit }: { result: GenerationOutput | null, sourceContent?: string, onSplit?: (topics: string[]) => void }) {
+export function GenerationResult({ result, sourceContent, onSplit, onDiscard }: { result: GenerationOutput | null, sourceContent?: string, onSplit?: (topics: string[]) => void, onDiscard?: () => void }) {
   const [isConsolidating, setIsConsolidating] = useState<boolean>(false);
   const [selectedForConsolidation, setSelectedForConsolidation] = useState<string[]>([]);
+  const [isPublishing, setIsPublishing] = useState(false);
+  const [publishResult, setPublishResult] = useState<{ success: boolean; message: string; solutionId?: string } | null>(null);
   
   const [consolidatedData, setConsolidatedData] = useState<{
     mergedDraft: GenerationOutput;
@@ -339,20 +341,94 @@ export function GenerationResult({ result, sourceContent, onSplit }: { result: G
         </>
       )}
 
-      <div className="flex items-center justify-between mt-4 border-t border-slate-200 pt-5 pb-2">
-        <div className="text-xs flex items-center gap-2">
-           <span className="text-slate-500 font-medium">Confidence Score:</span>
-           <span className={`font-mono font-bold ${displayResult.confidence > 0.8 ? 'text-emerald-600' : 'text-amber-600'}`}>
-             {(displayResult.confidence * 100).toFixed(0)}%
-           </span>
-        </div>
-        <div className="flex gap-2">
-           <button className="px-5 py-2.5 bg-white hover:bg-slate-50 border border-slate-300 rounded-xl text-sm font-semibold text-slate-700 transition-colors shadow-sm">
-             Discard
-           </button>
-           <button className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 shadow-md text-white rounded-xl text-sm font-semibold transition-all">
-             Approve & Publish
-           </button>
+      <div className="flex flex-col gap-3 mt-4 border-t border-slate-200 pt-5 pb-2">
+        {/* Published Success Banner */}
+        {publishResult && (
+          <div className={`p-3 rounded-lg text-sm flex items-center gap-3 ${publishResult.success ? 'bg-emerald-50 border border-emerald-200 text-emerald-800' : 'bg-red-50 border border-red-200 text-red-700'}`}>
+            {publishResult.success ? <Check size={16} className="text-emerald-600 shrink-0" /> : <X size={16} className="text-red-500 shrink-0" />}
+            <div className="flex-1">
+              <span className="font-semibold">{publishResult.success ? 'Published to KB!' : 'Publish Failed'}</span>
+              {publishResult.solutionId && (
+                <span className="ml-2 text-xs font-mono bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded">ID: {publishResult.solutionId}</span>
+              )}
+              {!publishResult.success && <span className="ml-2 text-xs">{publishResult.message}</span>}
+            </div>
+          </div>
+        )}
+
+        <div className="flex items-center justify-between">
+          <div className="text-xs flex items-center gap-2">
+             <span className="text-slate-500 font-medium">Confidence Score:</span>
+             <span className={`font-mono font-bold ${displayResult.confidence > 0.8 ? 'text-emerald-600' : 'text-amber-600'}`}>
+               {(displayResult.confidence * 100).toFixed(0)}%
+             </span>
+          </div>
+          <div className="flex gap-2">
+             <button
+               onClick={() => onDiscard?.()}
+               className="px-5 py-2.5 bg-white hover:bg-slate-50 border border-slate-300 rounded-xl text-sm font-semibold text-slate-700 transition-colors shadow-sm"
+             >
+               Discard
+             </button>
+             <button
+               onClick={async () => {
+                 if (isPublishing || (publishResult && publishResult.success)) return;
+                 setIsPublishing(true);
+                 setPublishResult(null);
+                 try {
+                   // Build the fields array for the API
+                   let fieldsPayload: { fieldName: string; fieldValue: string }[] = [];
+                   const templateName = displayResult._templateName || 'Error (RA)';
+
+                   if (displayResult.customFields && Object.keys(displayResult.customFields).length > 0) {
+                     fieldsPayload = Object.entries(displayResult.customFields)
+                       .filter(([, v]) => v && v.trim() !== '')
+                       .map(([k, v]) => ({ fieldName: k, fieldValue: v }));
+                   } else {
+                     // Classic KCS fallback
+                     if (displayResult.problem) fieldsPayload.push({ fieldName: 'Error Message', fieldValue: displayResult.problem });
+                     if (displayResult.cause) fieldsPayload.push({ fieldName: 'Cause', fieldValue: displayResult.cause });
+                     if (displayResult.resolution) fieldsPayload.push({ fieldName: 'Solution', fieldValue: displayResult.resolution });
+                   }
+
+                   const res = await fetch('/api/publish', {
+                     method: 'POST',
+                     headers: { 'Content-Type': 'application/json' },
+                     body: JSON.stringify({
+                       title: displayResult.title,
+                       templateName,
+                       summary: displayResult.title,
+                       fields: fieldsPayload,
+                     }),
+                   });
+                   const data = await res.json();
+                   if (res.ok && data.success) {
+                     setPublishResult({ success: true, message: 'Published!', solutionId: data.id || data.solutionId || data.rawResponse });
+                   } else {
+                     setPublishResult({ success: false, message: data.error || data.details || 'Unknown error' });
+                   }
+                 } catch (e) {
+                   setPublishResult({ success: false, message: e instanceof Error ? e.message : 'Network error' });
+                 } finally {
+                   setIsPublishing(false);
+                 }
+               }}
+               disabled={isPublishing || (!!publishResult && publishResult.success)}
+               className={`px-5 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 shadow-md disabled:opacity-60 ${
+                 publishResult?.success
+                   ? 'bg-emerald-600 text-white cursor-default'
+                   : 'bg-indigo-600 hover:bg-indigo-700 text-white'
+               }`}
+             >
+               {isPublishing ? (
+                 <><Loader2 size={16} className="animate-spin" /> Publishing...</>
+               ) : publishResult?.success ? (
+                 <><Check size={16} /> Published</>
+               ) : (
+                 'Approve & Publish'
+               )}
+             </button>
+          </div>
         </div>
       </div>
     </div>
