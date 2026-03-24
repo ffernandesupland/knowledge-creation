@@ -1,8 +1,8 @@
 const fs = require('fs');
 const dotenv = require('dotenv');
 
-// Load environment variables from .env.local
-const envConfig = dotenv.parse(fs.readFileSync('.env.local'));
+const envPath = fs.existsSync('.env.local') ? '.env.local' : '.env';
+const envConfig = dotenv.parse(fs.readFileSync(envPath));
 for (const k in envConfig) {
   process.env[k] = envConfig[k];
 }
@@ -72,15 +72,13 @@ async function run() {
             if (!solutionResponse2.ok) throw new Error(`Solution fetch failed: ${solutionResponse2.status} ${await solutionResponse2.text()}`);
             const data = await solutionResponse2.json();
             console.log(`✅ Solution Retrieval Successful!\n`);
-            console.log(`Title: ${data.title || data.solutionTitle || 'No Title'}`);
-            console.log(`Data excerpt: ${JSON.stringify(data).substring(0, 300)}...`);
+            console.log(JSON.stringify(data, null, 2));
             return;
         }
 
         const data = await solutionResponse.json();
         console.log(`✅ Solution Retrieval Successful!\n`);
-        console.log(`Title: ${data.title || data.solutionTitle || 'No Title'}`);
-        console.log(`Data excerpt: ${JSON.stringify(data).substring(0, 300)}...`);
+        console.log(JSON.stringify(data, null, 2));
 
     } catch (err) {
         console.error("❌ Error:", err.message);

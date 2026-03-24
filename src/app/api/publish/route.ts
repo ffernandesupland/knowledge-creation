@@ -28,26 +28,25 @@ export async function POST(req: Request) {
 
     const basicAuth = Buffer.from(`${username}:${password}`).toString("base64");
 
-    // Build the displayFields string from the fields array
-    // Format: "FieldName1=value1;FieldName2=value2"
-    const displayFieldsStr = fields
-      .filter(
-        (f: { fieldName: string; fieldValue: string }) =>
-          f.fieldValue && f.fieldValue.trim() !== ""
-      )
-      .map(
-        (f: { fieldName: string; fieldValue: string }) =>
-          `${f.fieldName}=${f.fieldValue}`
-      )
-      .join(";");
-
-    // Call addToKb — using Basic Auth directly (works more reliably)
-    // NOTE: do NOT pass "language" param — it causes addToKb to fail
     const baseUrl = (process.env.KB_SEARCH_URL || "").replace("/search", "");
 
-    // RA's addToKb is very picky about the body format.
-    // If displayFields is large, it MUST be passed as a form parameter in the body.
-    const useBody = displayFieldsStr.length > 500;
+    // RA's addToKb is very picky about the body format and separators.
+    // Our test diagnostics confirmed that:
+    // 1. URL parameters are the most reliable.
+    // 2. The separator ";" in HTML attributes (like style="...") breaks RA's displayFields parser.
+    // 3. Entity-encoding these separators (&#59; and &#61;) prevents the parser from breaking.
+
+    const encodeRAValue = (val: string) => {
+      if (!val) return "";
+      // Replace '=' and ';' with HTML entities to avoid breaking the RA field parser
+      return val.replace(/=/g, '&#61;').replace(/;/g, '&#59;');
+    };
+
+    // Build the displayFields string from the fields array
+    const displayFieldsStr = fields
+      .filter((f: any) => f.fieldValue && f.fieldValue.trim() !== "")
+      .map((f: any) => `${f.fieldName}=${encodeRAValue(f.fieldValue)}`)
+      .join(";");
 
     const addParams = new URLSearchParams({
       companyCode,
@@ -55,33 +54,20 @@ export async function POST(req: Request) {
       title,
       templateName,
       summary: summary || title,
+      displayFields: displayFieldsStr
     });
 
-    if (!useBody) {
-      addParams.set("displayFields", displayFieldsStr);
-    }
-
     const addUrl = `${baseUrl}/addToKb?${addParams.toString()}`;
-    
-    // For large payloads, we put displayFields in the POST body as multipart/form-data
-    let postBody: any = undefined;
-    if (useBody) {
-      const formData = new FormData();
-      formData.append("displayFields", displayFieldsStr);
-      postBody = formData;
-    }
 
-    console.log("[Publish] Calling addToKb:", addUrl);
-    console.log("[Publish] Display fields length:", displayFieldsStr.length);
+    console.log("[Publish] Calling addToKb (URL-only mode):", addUrl.substring(0, 200) + "...");
+    console.log("[Publish] displayFields length:", displayFieldsStr.length);
 
     const addResponse = await fetch(addUrl, {
       method: "POST",
       headers: {
         Authorization: `Basic ${basicAuth}`,
         Accept: "application/json",
-        // Content-Type is automatically set to multipart/form-data with boundary by the fetch API when passed a FormData object
       },
-      body: postBody,
       cache: "no-store",
     });
 
