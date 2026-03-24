@@ -4,6 +4,13 @@ import { RA_SNIPPETS } from "@/lib/snippets";
 import { Copy, Check, FileCode, Info } from "lucide-react";
 import { useState } from "react";
 
+// Helper to rewrite relative RA URLs for local display
+const rewriteRAUrls = (html: string) => {
+  if (!html) return html;
+  if (html.includes('src="http')) return html;
+  return html.replace(/src="\/solutionmanager\//g, 'src="https://qa-develop.rightanswers.com/solutionmanager/');
+};
+
 export default function TemplatesPage() {
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
@@ -63,7 +70,7 @@ export default function TemplatesPage() {
 
             <div className="mt-2 pt-4 border-t border-slate-100">
                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Live Result</div>
-               <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 overflow-hidden" dangerouslySetInnerHTML={{ __html: snippet.html }} />
+               <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 overflow-hidden" dangerouslySetInnerHTML={{ __html: rewriteRAUrls(snippet.html) }} />
             </div>
           </div>
         ))}

@@ -28,6 +28,15 @@ export type GenerationOutput = {
   _templateFields?: { fieldName: string; description: string; required: boolean; searchable: boolean }[];
 };
 
+// Helper to rewrite relative RA URLs for local display
+const rewriteRAUrls = (html: string) => {
+  if (!html) return html;
+  // If the URL is already absolute, don't touch it
+  if (html.includes('src="http')) return html;
+  // Map relative /solutionmanager paths to the portal URL for display only
+  return html.replace(/src="\/solutionmanager\//g, 'src="https://qa-develop.rightanswers.com/solutionmanager/');
+};
+
 export function GenerationResult({ result, sourceContent, onSplit, onDiscard, archivedArticleIds }: {
   result: GenerationOutput | null;
   sourceContent?: string;
@@ -320,7 +329,7 @@ export function GenerationResult({ result, sourceContent, onSplit, onDiscard, ar
               )}
               <div 
                 className="text-sm text-slate-700 leading-relaxed prose prose-slate max-w-none" 
-                dangerouslySetInnerHTML={{ __html: fieldContent }} 
+                dangerouslySetInnerHTML={{ __html: rewriteRAUrls(fieldContent) }} 
               />
             </div>
           );
@@ -333,7 +342,7 @@ export function GenerationResult({ result, sourceContent, onSplit, onDiscard, ar
               <h4 className="text-[11px] uppercase tracking-wider text-indigo-500 font-bold mb-2">Environment / Problem</h4>
               <div 
                 className="text-sm text-slate-700 leading-relaxed prose prose-slate max-w-none" 
-                dangerouslySetInnerHTML={{ __html: displayResult.problem }} 
+                dangerouslySetInnerHTML={{ __html: rewriteRAUrls(displayResult.problem) }} 
               />
             </div>
           )}
@@ -343,7 +352,7 @@ export function GenerationResult({ result, sourceContent, onSplit, onDiscard, ar
               <h4 className="text-[11px] uppercase tracking-wider text-orange-500 font-bold mb-2">Cause</h4>
               <div 
                 className="text-sm text-slate-700 leading-relaxed prose prose-slate max-w-none" 
-                dangerouslySetInnerHTML={{ __html: displayResult.cause }} 
+                dangerouslySetInnerHTML={{ __html: rewriteRAUrls(displayResult.cause) }} 
               />
             </div>
           )}
@@ -353,7 +362,7 @@ export function GenerationResult({ result, sourceContent, onSplit, onDiscard, ar
               <h4 className="text-[11px] uppercase tracking-wider text-emerald-500 font-bold mb-2">Resolution</h4>
               <div 
                 className="text-sm text-slate-700 leading-relaxed prose prose-slate max-w-none" 
-                dangerouslySetInnerHTML={{ __html: displayResult.resolution }} 
+                dangerouslySetInnerHTML={{ __html: rewriteRAUrls(displayResult.resolution) }} 
               />
             </div>
           )}
