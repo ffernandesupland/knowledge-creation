@@ -44,6 +44,11 @@ export async function POST(req: Request) {
     // Call addToKb — using Basic Auth directly (works more reliably)
     // NOTE: do NOT pass "language" param — it causes addToKb to fail
     const baseUrl = (process.env.KB_SEARCH_URL || "").replace("/search", "");
+
+    // RA's addToKb is very picky about the body format.
+    // If displayFields is large, it MUST be passed as a form parameter in the body.
+    const useBody = displayFieldsStr.length > 500;
+
     const addParams = new URLSearchParams({
       companyCode,
       appInterface,
@@ -52,14 +57,20 @@ export async function POST(req: Request) {
       summary: summary || title,
     });
 
-    // If displayFieldsStr is small, pass as query param; otherwise use body
-    const useBody = displayFieldsStr.length > 1500;
-
     if (!useBody) {
       addParams.set("displayFields", displayFieldsStr);
     }
 
-    const addUrl = `${baseUrl}/addToKb?${addParams.toString()}`;
+    const addUrl = `${baseUrl}/addToKb?${!useBody ? addParams.toString() : `companyCode=${companyCode}&appInterface=${appInterface}`}`;
+
+    // For large payloads, we put the fields in the POST body as application/x-www-form-urlencoded
+    const bodyParams = new URLSearchParams();
+    if (useBody) {
+      bodyParams.set("title", title);
+      bodyParams.set("templateName", templateName);
+      bodyParams.set("summary", summary || title);
+      bodyParams.set("displayFields", displayFieldsStr);
+    }
 
     console.log("[Publish] Calling addToKb:", addUrl);
     console.log("[Publish] Display fields length:", displayFieldsStr.length);
@@ -69,9 +80,9 @@ export async function POST(req: Request) {
       headers: {
         Authorization: `Basic ${basicAuth}`,
         Accept: "application/json",
-        ...(useBody ? { "Content-Type": "application/json" } : {}),
+        ...(useBody ? { "Content-Type": "application/x-www-form-urlencoded" } : {}),
       },
-      body: useBody ? JSON.stringify(displayFieldsStr) : undefined,
+      body: useBody ? bodyParams.toString() : undefined,
       cache: "no-store",
     });
 
