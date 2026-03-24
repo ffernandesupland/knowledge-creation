@@ -28,46 +28,35 @@ export async function POST(req: Request) {
 
     const basicAuth = Buffer.from(`${username}:${password}`).toString("base64");
 
+    // We use the manageSolution endpoint because it supports a native JSON body for fields,
+    // which avoids all the string-parsing issues with HTML characters (= and ;) in addToKb.
     const baseUrl = (process.env.KB_SEARCH_URL || "").replace("/search", "");
-
-    // RA's addToKb is very picky about the body format and separators.
-    // Our test diagnostics confirmed that:
-    // 1. URL parameters are the most reliable.
-    // 2. The separator ";" in HTML attributes (like style="...") breaks RA's displayFields parser.
-    // 3. Entity-encoding these separators (&#59; and &#61;) prevents the parser from breaking.
-
-    const encodeRAValue = (val: string) => {
-      if (!val) return "";
-      // Replace '=' and ';' with HTML entities to avoid breaking the RA field parser
-      return val.replace(/=/g, '&#61;').replace(/;/g, '&#59;');
-    };
-
-    // Build the displayFields string from the fields array
-    const displayFieldsStr = fields
-      .filter((f: any) => f.fieldValue && f.fieldValue.trim() !== "")
-      .map((f: any) => `${f.fieldName}=${encodeRAValue(f.fieldValue)}`)
-      .join(";");
-
+    
+    // manageSolution requires keywords and collections for new solutions
     const addParams = new URLSearchParams({
       companyCode,
       appInterface,
       title,
       templateName,
       summary: summary || title,
-      displayFields: displayFieldsStr
+      status: "draft",
+      keywords: "ai-generated", // Default keywords
+      collections: "custom_BulkEditTest" // Default collection (verified working in tests)
     });
 
-    const addUrl = `${baseUrl}/addToKb?${addParams.toString()}`;
+    const addUrl = `${baseUrl}/manageSolution?${addParams.toString()}`;
 
-    console.log("[Publish] Calling addToKb (URL-only mode):", addUrl.substring(0, 200) + "...");
-    console.log("[Publish] displayFields length:", displayFieldsStr.length);
+    console.log("[Publish] Calling manageSolution:", addUrl.substring(0, 200) + "...");
+    console.log("[Publish] Fields count:", fields.length);
 
     const addResponse = await fetch(addUrl, {
       method: "POST",
       headers: {
         Authorization: `Basic ${basicAuth}`,
+        "Content-Type": "application/json",
         Accept: "application/json",
       },
+      body: JSON.stringify(fields),
       cache: "no-store",
     });
 
@@ -77,26 +66,21 @@ export async function POST(req: Request) {
     if (!addResponse.ok) {
       return NextResponse.json(
         {
-          error: `addToKb failed (${addResponse.status})`,
+          error: `manageSolution failed (${addResponse.status})`,
           details: responseText,
         },
         { status: addResponse.status }
       );
     }
 
-    // Check for the known error message
-    if (responseText.includes("Could not create solution")) {
-      return NextResponse.json(
-        { error: "Could not create solution", details: responseText },
-        { status: 422 }
-      );
-    }
+    // manageSolution returns a string like "Successfully created solution with ID: 260324101313947"
+    const idMatch = responseText.match(/ID:\s*(\d+)/);
+    const solutionId = idMatch ? idMatch[1] : responseText.trim();
 
-    // The response is the solution ID (a string like "260324075044263")
     return NextResponse.json({
       success: true,
       message: "Solution published to Knowledge Base",
-      solutionId: responseText.trim(),
+      solutionId: solutionId,
     });
   } catch (error: unknown) {
     console.error("Publish error:", error);
