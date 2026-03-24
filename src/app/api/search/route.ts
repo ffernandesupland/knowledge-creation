@@ -9,6 +9,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Search query is required" }, { status: 400 });
     }
 
+
+
     const apiUrl = process.env.KB_SEARCH_URL;
     const companyCode = process.env.KB_COMPANY_CODE;
     const authUrl = process.env.KB_AUTH_URL;
