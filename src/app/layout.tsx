@@ -17,6 +17,8 @@ export const metadata: Metadata = {
   description: "Generate structured KB articles from raw sources instantly.",
 };
 
+import { EnterpriseShell } from "@/components/EnterpriseShell";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -25,7 +27,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${inter.variable} ${outfit.variable} antialiased min-h-screen selection:bg-indigo-500/30 font-sans`}>
-        {children}
+        <EnterpriseShell>
+          {children}
+        </EnterpriseShell>
       </body>
     </html>
   );

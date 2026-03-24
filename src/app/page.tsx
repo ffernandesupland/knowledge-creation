@@ -4,7 +4,6 @@ import { useState } from "react";
 import { SourceInput, PipelineConfig } from "@/components/SourceInput";
 import { GenerationResult, GenerationOutput } from "@/components/GenerationResult";
 import { PlanningDashboard } from "@/components/PlanningDashboard";
-import { EnterpriseShell } from "@/components/EnterpriseShell";
 import { Network, FileText, CheckCircle2, Archive } from "lucide-react";
 
 export default function Home() {
@@ -78,8 +77,7 @@ export default function Home() {
   };
 
   return (
-    <EnterpriseShell>
-      <div className="flex flex-col gap-8 p-6 lg:p-10 max-w-[1600px] mx-auto animate-in fade-in slide-in-from-bottom-4 duration-700 w-full">
+    <div className="flex flex-col gap-8 p-6 lg:p-10 max-w-[1600px] mx-auto animate-in fade-in slide-in-from-bottom-4 duration-700 w-full">
         
         <section className="space-y-4 max-w-3xl mt-2">
           <h2 className="text-3xl md:text-4xl font-outfit font-bold tracking-tight text-slate-800 mb-2">
@@ -244,6 +242,5 @@ export default function Home() {
       </section>
 
     </div>
-    </EnterpriseShell>
   );
 }

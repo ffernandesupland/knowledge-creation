@@ -1,42 +1,81 @@
-import React from "react";
-import { LayoutDashboard, Users, FileText, Settings, HelpCircle, Search, Bell } from "lucide-react";
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { LayoutDashboard, Users, FileText, Settings, HelpCircle, Search, Bell, Cpu } from "lucide-react";
 
 export function EnterpriseShell({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+
+  const isSelected = (path: string) => pathname === path;
+
   return (
     <div className="flex h-screen w-full bg-slate-50 text-slate-800 font-sans overflow-hidden">
       {/* Left Sidebar (Classic Dark) */}
       <aside className="hidden md:flex flex-col w-64 bg-slate-950 text-slate-300 border-r border-slate-800 shrink-0">
         <div className="h-16 flex items-center px-6 border-b border-white/10 shrink-0">
-          <div className="w-8 h-8 rounded bg-indigo-600 flex items-center justify-center text-white font-outfit font-bold shadow-sm mr-3">
-            AI
-          </div>
-          <span className="font-outfit font-semibold text-white tracking-wide">Knowledge Creator</span>
+          <Link href="/" className="flex items-center">
+            <div className="w-8 h-8 rounded bg-indigo-600 flex items-center justify-center text-white font-outfit font-bold shadow-sm mr-3">
+              AI
+            </div>
+            <span className="font-outfit font-semibold text-white tracking-wide">Knowledge Creator</span>
+          </Link>
         </div>
         
         <div className="flex-1 overflow-y-auto py-6 px-4 flex flex-col gap-1 custom-scrollbar">
           <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500 px-2 mb-2">Workspace</div>
           
-          <button className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-indigo-600/10 text-indigo-400 font-medium transition-colors">
+          <Link 
+            href="/" 
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium transition-colors ${
+              isSelected("/") ? "bg-indigo-600/10 text-indigo-400" : "hover:bg-white/5 hover:text-white"
+            }`}
+          >
             <LayoutDashboard size={18} />
             Master Generator
-          </button>
+          </Link>
           
-          <button className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/5 hover:text-white transition-colors">
+          <Link 
+            href="/templates" 
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
+              isSelected("/templates") ? "bg-indigo-600/10 text-indigo-400" : "hover:bg-white/5 hover:text-white"
+            }`}
+          >
             <FileText size={18} />
             Template Library
-          </button>
+          </Link>
+
+          <Link 
+            href="/agents" 
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
+              isSelected("/agents") ? "bg-indigo-600/10 text-indigo-400" : "hover:bg-white/5 hover:text-white"
+            }`}
+          >
+            <Cpu size={18} />
+            Agent Visualizer
+          </Link>
 
           <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500 px-2 mt-6 mb-2">Administration</div>
           
-          <button className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/5 hover:text-white transition-colors">
+          <Link 
+            href="/team" 
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
+              isSelected("/team") ? "bg-indigo-600/10 text-indigo-400" : "hover:bg-white/5 hover:text-white"
+            }`}
+          >
             <Users size={18} />
             Team Access
-          </button>
+          </Link>
           
-          <button className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/5 hover:text-white transition-colors">
+          <Link 
+            href="/settings" 
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
+              isSelected("/settings") ? "bg-indigo-600/10 text-indigo-400" : "hover:bg-white/5 hover:text-white"
+            }`}
+          >
             <Settings size={18} />
             Global Settings
-          </button>
+          </Link>
         </div>
 
         <div className="p-4 border-t border-white/10 shrink-0">

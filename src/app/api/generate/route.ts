@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
+import { AGENTS } from "@/lib/agents";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY || "dummy_key_for_build",
@@ -40,25 +41,8 @@ export async function POST(req: Request) {
     // No RightAnswers search here! Triage must be instantaneous.
     // The Dashboard will perform the per-topic search after triage.
     
-    const systemPrompt = `You are an expert Knowledge Base Triage Agent.
-Your task is to analyze the user's raw input (chat transcript, notes, etc) and determine the exact distinct topics or problems it covers.
-If the input covers multiple unrelated issues (e.g., "vpn is broken and also my printer won't work"), split them into distinct, action-oriented KCS titles.
-If it covers only one issue, return an array with just that single title.
-${pipeline.optSplitTopics ? "Be aggressive in splitting distinct issues." : "Do NOT split topics unless absolutely necessary."}
-
-Always respond in STRICT JSON format matching this exact schema:
-{
-  "topics": [
-    {
-      "title": "A clear, concise title for this individual knowledge topic.",
-      "searchQuery": "A highly optimized search query extracted from the content to find existing KB articles related strictly to this topic. Use keywords, error codes, and symptoms."
-    },
-    {
-      "title": "Another clear, concise title for a distinct topic.",
-      "searchQuery": "Another highly optimized search query for the second topic."
-    }
-  ]
-}`;
+    const triageAgent = AGENTS.find(a => a.id === "triage")!;
+    const systemPrompt = `${triageAgent.systemPrompt}\n\n${pipeline.optSplitTopics ? "Be aggressive in splitting distinct issues." : "Do NOT split topics unless absolutely necessary."}`;
 
     const completion = await openai.chat.completions.create({
       model: process.env.AI_MODEL || "gpt-5.4",

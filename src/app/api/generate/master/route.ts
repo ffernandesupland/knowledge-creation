@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { OpenAI } from "openai";
+import { AGENTS } from "@/lib/agents";
+import { RA_SNIPPETS } from "@/lib/snippets";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY || "dummy_key_for_build",
@@ -125,19 +127,25 @@ The AI MUST be aware of each field's name and description and use them to decide
       
       const isConsolidating = combinedExistingArticles.length > 0;
       
-      const systemPromptBase = `You are an expert technical writer trained in Knowledge-Centered Service (KCS) methodology.
-Your task is to transform raw support notes into a standardized knowledge article specifically focused on the topic: "${topicPlan.topic}".
-${dynamicInstructions}
-${fieldSchemaBlock}
+      const masterAgent = AGENTS.find(a => a.id === "master")!;
+      const snippetsJson = JSON.stringify(RA_SNIPPETS.map(s => ({ name: s.name, html: s.html })), null, 2);
+      
+      let systemPromptBase = masterAgent.systemPrompt
+        .replace("{SNIPPETS_JSON}", snippetsJson);
 
-Force isMultiTopic to false.
+      // Append dynamic context
+      systemPromptBase += `\n\n### ACTIVE TASK CONTEXT:\n`;
+      systemPromptBase += `Topic: "${topicPlan.topic}"\n`;
+      systemPromptBase += dynamicInstructions;
+      systemPromptBase += fieldSchemaBlock;
+      systemPromptBase += `\nForce isMultiTopic to false.\n`;
 
-${isConsolidating ? `CRITICAL RULE: The user has selected the following EXISTING KB Articles to merge into this new draft:
-${combinedExistingArticles}
-You MUST merge the historical context, environment details, and solutions from BOTH the original source AND all provided existing articles. You must not lose historical context.
-Since you are consolidating, you must populate the "consolidationPlan" object in the JSON schema!` : ""}
+      if (isConsolidating) {
+        systemPromptBase += `\n\nCRITICAL RULE: The user has selected the following EXISTING KB Articles to merge into this new draft:\n${combinedExistingArticles}\nYou MUST merge the historical context, environment details, and solutions from BOTH the original source AND all provided existing articles. You must not lose historical context. Since you are consolidating, you must populate the "consolidationPlan" object in the JSON schema!`;
+      }
 
-Always respond in strict JSON format matching this schema:
+      // Final schema reminder
+      systemPromptBase += `\n\nAlways respond in strict JSON format matching this schema:
 {
   "title": "A clear, action-oriented title",
   ${fieldJsonSchema}
