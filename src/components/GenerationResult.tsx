@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle2, Copy, AlertTriangle, ExternalLink, GitBranch, Layers, Archive, FilePlus } from "lucide-react";
+import { CheckCircle2, Copy, AlertTriangle, ExternalLink, GitBranch, Layers, Archive, FilePlus, LayoutTemplate } from "lucide-react";
 import { useState } from "react";
 
 export type SearchContextArticle = {
@@ -12,15 +12,20 @@ export type SearchContextArticle = {
 
 export type GenerationOutput = {
   title: string;
-  problem: string;
-  cause: string;
-  resolution: string;
+  problem?: string;
+  cause?: string;
+  resolution?: string;
   confidence: number;
   duplicateWarning?: boolean;
   duplicateArticleId?: string | null;
   isMultiTopic?: boolean;
   suggestedTopics?: string[];
   searchContext?: { article: SearchContextArticle; similarity: number }[];
+  // Dynamic template fields
+  customFields?: Record<string, string>;
+  _templateName?: string;
+  _kbPrefix?: string;
+  _templateFields?: { fieldName: string; description: string; required: boolean; searchable: boolean }[];
 };
 
 export function GenerationResult({ result, sourceContent, onSplit }: { result: GenerationOutput | null, sourceContent?: string, onSplit?: (topics: string[]) => void }) {
@@ -262,6 +267,17 @@ export function GenerationResult({ result, sourceContent, onSplit }: { result: G
         </div>
       )}
 
+      {/* Template Badge */}
+      {displayResult._templateName && (
+        <div className="flex items-center gap-2 mt-2">
+          <span className="inline-flex items-center gap-1.5 text-[10px] font-bold tracking-wider bg-violet-50 text-violet-700 px-3 py-1.5 rounded-full border border-violet-200">
+            <LayoutTemplate size={12} />
+            {displayResult._templateName}
+            {displayResult._kbPrefix && <span className="text-violet-400">({displayResult._kbPrefix})</span>}
+          </span>
+        </div>
+      )}
+
       <div className="group relative bg-white border border-slate-200 rounded-xl p-4 hover:border-indigo-200 hover:shadow-sm transition-all mt-2">
         <h4 className="text-[11px] uppercase tracking-wider text-slate-400 font-bold mb-2">Title</h4>
         <p className="text-slate-800 font-semibold text-lg">{displayResult.title}</p>
@@ -270,20 +286,58 @@ export function GenerationResult({ result, sourceContent, onSplit }: { result: G
         </button>
       </div>
 
-      <div className="group relative bg-white border border-slate-200 rounded-xl p-4 hover:border-indigo-200 hover:shadow-sm transition-all">
-        <h4 className="text-[11px] uppercase tracking-wider text-indigo-500 font-bold mb-2">Environment / Problem</h4>
-        <p className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">{displayResult.problem}</p>
-      </div>
+      {/* Dynamic Template Fields OR Classic KCS Fallback */}
+      {displayResult.customFields && Object.keys(displayResult.customFields).length > 0 ? (
+        // Dynamic: render each field from the template
+        Object.entries(displayResult.customFields).map(([fieldName, fieldContent], idx) => {
+          if (!fieldContent || fieldContent.trim() === "") return null;
+          const fieldColors = [
+            'text-indigo-500', 'text-orange-500', 'text-emerald-500',
+            'text-sky-500', 'text-rose-500', 'text-amber-500',
+            'text-teal-500', 'text-purple-500', 'text-lime-500'
+          ];
+          const color = fieldColors[idx % fieldColors.length];
+          const templateField = displayResult._templateFields?.find(f => f.fieldName === fieldName);
+          return (
+            <div key={fieldName} className="group relative bg-white border border-slate-200 rounded-xl p-4 hover:border-indigo-200 hover:shadow-sm transition-all">
+              <div className="flex items-center justify-between mb-2">
+                <h4 className={`text-[11px] uppercase tracking-wider ${color} font-bold`}>{fieldName}</h4>
+                {templateField?.required && (
+                  <span className="text-[9px] font-bold uppercase tracking-wider bg-red-50 text-red-500 px-1.5 py-0.5 rounded border border-red-100">Required</span>
+                )}
+              </div>
+              {templateField?.description && (
+                <p className="text-[11px] text-slate-400 mb-2 italic">{templateField.description}</p>
+              )}
+              <p className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">{fieldContent}</p>
+            </div>
+          );
+        })
+      ) : (
+        // Classic KCS fallback: hardcoded Problem / Cause / Resolution
+        <>
+          {displayResult.problem && (
+            <div className="group relative bg-white border border-slate-200 rounded-xl p-4 hover:border-indigo-200 hover:shadow-sm transition-all">
+              <h4 className="text-[11px] uppercase tracking-wider text-indigo-500 font-bold mb-2">Environment / Problem</h4>
+              <p className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">{displayResult.problem}</p>
+            </div>
+          )}
 
-      <div className="group relative bg-white border border-slate-200 rounded-xl p-4 hover:border-indigo-200 hover:shadow-sm transition-all">
-        <h4 className="text-[11px] uppercase tracking-wider text-orange-500 font-bold mb-2">Cause</h4>
-        <p className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">{displayResult.cause}</p>
-      </div>
+          {displayResult.cause && (
+            <div className="group relative bg-white border border-slate-200 rounded-xl p-4 hover:border-indigo-200 hover:shadow-sm transition-all">
+              <h4 className="text-[11px] uppercase tracking-wider text-orange-500 font-bold mb-2">Cause</h4>
+              <p className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">{displayResult.cause}</p>
+            </div>
+          )}
 
-      <div className="group relative bg-white border border-slate-200 rounded-xl p-4 hover:border-indigo-200 hover:shadow-sm transition-all">
-        <h4 className="text-[11px] uppercase tracking-wider text-emerald-500 font-bold mb-2">Resolution</h4>
-        <p className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">{displayResult.resolution}</p>
-      </div>
+          {displayResult.resolution && (
+            <div className="group relative bg-white border border-slate-200 rounded-xl p-4 hover:border-indigo-200 hover:shadow-sm transition-all">
+              <h4 className="text-[11px] uppercase tracking-wider text-emerald-500 font-bold mb-2">Resolution</h4>
+              <p className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">{displayResult.resolution}</p>
+            </div>
+          )}
+        </>
+      )}
 
       <div className="flex items-center justify-between mt-4 border-t border-slate-200 pt-5 pb-2">
         <div className="text-xs flex items-center gap-2">
